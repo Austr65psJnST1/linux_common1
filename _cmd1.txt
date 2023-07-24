@@ -1,0 +1,267 @@
+
+
+
+
+--------------------------------------- 去掉#开头，去掉空行
+grep -Ev "^#|^$" my.cnf 
+
+-------------------------------------------------------------------
+设置FTP用户的账号，例如账号为“ftpuser1”，目录为/home/ftpuser1，且设置不允许通过ssh登录
+
+useradd -d /home/user1 -s /sbin/nologin user1
+echo 111111 | passwd  --stdin  user1 
+
+
+------------------------------------------------------------------- 系统盘变成只读的解决
+mount -o remount rw /      
+
+
+
+-------------------------------------------------------------------- 后台 获取 OS 信息，保存到文件
+vmstat  5 4  > /home/oracle/1_getAWRFile/aa    &  
+
+mpstat -P ALL 2 10         --- 如果top 1 看不到所有CPU情况时候，使用这个命令，可以动态看到，间隔2秒，总共10次
+
+
+
+
+ cat /proc/meminfo | grep PageTables   | awk '{print strftime("[%Y-%m-%d %H:%M:%S]"),$0}' >> /home/oracle/daily_os_report/$(date +%Y%m%d)_getPagePref.lst    
+ free -m    | awk '{print strftime("[%Y-%m-%d %H:%M:%S]"),$0}'  >>  /home/oracle/daily_os_report/$(date +%Y%m%d)_getMemPref.lst    
+ ps -ef | grep ora_ | wc -l | awk '{print strftime("[%Y-%m-%d %H:%M:%S]"),$0}' >> /home/oracle/daily_os_report/$(date +%Y%m%d)_getOraConn.lst  
+ 
+ 
+ 
+
+--------------------------------------------------------------------- 如何从日志找出 何时重启了计算机
+重启OS，可以在 /var/log/messages 中，看到如下的信息，表示进行了关机、重启：
+Aug  4 15:32:35 node1 kernel: NET: Registered protocol family 10
+Aug  4 15:32:35 node1 kernel: e1000: eth0 NIC Link is Up 1000 Mbps Full Duplex, Flow Control: None
+Aug  4 15:32:35 node1 irqbalance: Balaincing is ineffective on systems with a single cache domain.  Shutting down
+Aug  4 15:32:36 node1 NetworkManager[1899]: <info> NetworkManager (version 0.8.1-66.el6) is starting...
+Aug  4 15:32:36 node1 NetworkManager[1899]: <info> Read config file /etc/NetworkManager/NetworkManager.conf
+
+
+[root@node1 log]# last reboot   （说明：这是倒序排列的，按照重启的时间）
+reboot   system boot  3.8.13-16.2.1.el Tue Aug  4 15:32 - 15:45  (00:12)    
+reboot   system boot  3.8.13-16.2.1.el Tue Aug  4 15:07 - 15:32  (00:24)  
+
+
+------------------------------------------------------------------------  查看硬盘型号
+1，如果有RAID，请通过对应的RAID管理（监控）工具查看，例如LSI的MegaCli：
+ # /opt/MegaCli -PDList -aALL
+如果没有RAID，通过hdparm命令查看即可
+  hdparm -I /dev/sda
+顺便说一下，如果服务器有配RAID，用hdparm查看硬盘信息时就会报错
+
+------------------------------------------------------------------------  查看内存型号
+dmidecode -t memory
+
+
+
+
+------------------------------------------------------------------------  max-depth=1的使用
+du -h --max-depth=1
+
+
+
+find . -type f -size  +800M  -print    找出大小超过800M的文件
+
+
+--------------------------------------------------------------------  xargs 的使用
+--------------------------------------------------------------------  当前目录下的全部文件里，找出有“2015-04-23”字符串的所有的文件，对这些文件，进行压缩打包成1个新的文件
+find . | xargs grep '2015-04-23' -sl | xargs zip /tmp/crs_2015-04-23.zip 
+
+
+
+--------------------------------------------------------------------  文件的 编码格式 转换，从 utf-16 变成 utf-8
+iconv -f utf-16 -t utf-8  oldfilename  >   newfilename     -- 原来的文件不变，产生新的文件了
+
+--------------------------------------------------------------------  生成软链接
+ln  -s  <源头文件>   <新的链接名>
+
+
+--------------------------------------------------------------------  查看子进程
+ps --ppid xxxx 
+
+
+--------------------------------------------------------------------  查看是否安装了哪些rpm包
+rpm -q binutils compat-db compat-libstdc++-33 glibc glibc-devel glibc-headers gcc gcc-c++ libstdc++ cpp make libaio ksh elfutils-libelf sysstat libaio libaio-devel setarch --qf '%{name}.%{arch}\n'|sort
+rpm -qa --queryformat "%{NAME}-%{VERSION}-%{RELEASE}(%{ARCH})\n" | grep glibc
+
+
+
+
+usermod -a -G fuse oracle       -- 把oracle用户加入 fuze 组中
+gpasswd -d oracle fuse          -- 从fuse 组中 删除 oracle用户
+
+
+
+--------------------------------------------------------------------  密码过期设置
+chage  -M 3 oracle
+chage  -M 99999 oracle       5个9，表示永不过期
+
+--------------------------------------------------------------------  密码修改，不回显，很方便
+echo 111111 | passwd --stdin root    
+echo 111111 | passwd --stdin oracle
+
+
+--------------------------------------------------------------------  iostat
+iostat -x -k -d 1
+
+rrqm/s: 每秒对该设备的读请求被合并次数，文件系统会对读取同块(block)的请求进行合并
+wrqm/s: 每秒对该设备的写请求被合并次数
+r/s: 每秒完成的读次数
+w/s: 每秒完成的写次数
+rkB/s: 每秒读数据量(kB为单位)
+wkB/s: 每秒写数据量(kB为单位)
+avgrq-sz:平均每次IO操作的数据量(扇区数为单位)
+avgqu-sz: 平均等待处理的IO请求队列长度
+await: 平均每次IO请求等待时间(包括等待时间和处理时间，毫秒为单位)
+svctm: 平均每次IO请求的处理时间(毫秒为单位)
+%util: 采用周期内用于IO操作的时间比率，即IO队列非空的时间比率
+ 
+使用 iostat -xd 3 的方式 
+
+
+--------------------------------------------------------------------  grep
+
+impdp help=y | grep -i KiLL | grep -v grep  　不区分大小写，不包括ｇｒｅｐ这个命令
+
+
+
+--------------------------------------------------------------------  查看某个进程占用的是 21 端口
+[root@dm01db01 ~]# lsof -i:21
+COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+vsftpd  10772 root    3u  IPv4  61230      0t0  TCP *:ftp (LISTEN)
+[root@dm01db01 ~]# 
+
+
+
+--------------------------------------------------------------------  删除 2天前的 文件
+find <指定的目录> -mtime +2  -name "*.jpg" -exec rm -rf {} \;
+表示：指定目录下的，2天前的，jpg结尾的文件，全部删除；
+
+
+-----------------------------------------------------------------  查看某个目录占用的 空间，不包括子目录，并排序输出
+cd / 
+du -Sk | sort -n    
+
+
+
+-----------------------------------------------------------------  查看最占空间、CPU、内存的
+find . -ls | sort -nrk7 | head -10    --- 找出某个目录下的最大空间占用的文件的前10个 
+du -S .  | sort -nr | head -10        --- 找出某个目录下的最大空间占用的文件夹的前10个 
+ps -e -o pcpu,pid,user,tty,args | sort -n -k 1 -r | head   -- 最占CPU
+ps -e -o pmem,pid,user,tty,args | sort -n -k 1 -r | head   -- 最占内存
+du -sh  * |   sort -hr                  --   按照占用空间大小排序，从大到小           
+
+
+
+
+find . -type f -size +2000M  -print0 | xargs -0 du -h | sort -nr | head -10   --- 找出某个目录下的占用2G以上的文件的前10个 
+
+--------------------------------------------------------------------- 创建一个1g的空文件
+dd if=/dev/zero of=/home/oracle/hello.dat  bs=1G count=1
+
+
+---------------------------------------------------------------------  从一个组中删除某个用户
+gpasswd -d  用户名  组
+
+
+
+
+
+--------------------------------------------------------------------  找占着已经被删除了的文件的那些进程  
+lsof | grep deleted 
+
+
+
+
+
+-----------------------------------------------------------------------  用户被pam_tally2 模块锁定的解决方法
+1，查看失败了多少次，以oracle用户为例
+  # pam_tally2 --user oracle  
+
+2，重置 # pam_tally2 --user oracle --reset
+3，修改 
+
+[root@node1 pam.d]# cat /etc/pam.d/sshd 
+#auth  required  pam_tally2.so deny=5 lock_time=600    # 注释掉这句话
+
+
+
+
+
+-----------------------------------------------------------------------  哪个进程占用了 1521 端口
+lsof -i:1521
+
+
+
+-----------------------------------------------------------------------  看看是否有 网络异常
+netstat -ptc   -- 注意如果Send-Q非常高，一般表示网络异常
+
+[root@node2 yum.repos.d]# netstat -lntup | grep 3306   -- 看看 mysql的服务
+tcp        0      0 :::3306                     :::*                        LISTEN      2262/mysqld         
+
+
+-----------------------------------------------------------------------  看看 服务器进程的监听是否启动了
+netstat -netlp               -- 活动的 Internet连接    只是服务器的
+
+
+-----------------------------------------------------------------------  解压缩 tar.xz 文件的命令
+
+-----------------------------------------  单个文件
+tar czf  1.txt.tar.gz  1.txt     # 压缩 + 打包
+tar xzf  1.txt.tar.gz            # 上面的解压
+
+
+
+
+tar zcvf   data.tar.gz   data/            -- /data 目录下的全部，压缩成了 data.tar.gz
+tar xzvf   data.tar.gz                    -- /data 目录下的全部，解压缩，成了原来名字的目录
+
+
+
+tar xvJf  *.tar.xz   
+
+tar zxvf  *.tar.gz   
+
+
+
+tar xvf   *.tar   -- 如果这个tar文件，没有被gzip压缩，只是被tar压缩，这样解压
+
+tar -cvf /tmp/etc.tar /etc <==   仅打包，不压缩！ 
+
+
+
+-----------------------------------------------------------------------
+查看磁盘分区的UUID使用 blkid  命令
+看网卡的 uuid 使用  nmcli con 命令，结果如下
+名称                      UUID                                   类型              范围     真实时间戳                        
+System eth2               a908cd3a-6873-4aa6-afb5-8c52b59852af   802-3-ethernet    系统     2015年08月20日 星期四 16时52分49秒
+System eth1               6ba3c7d0-a242-45d8-8843-22a488ef85a7   802-3-ethernet    系统     2015年08月20日 星期四 16时52分49秒
+Auto eth1                 6ba3c7d0-a242-45d8-8843-22a488ef85a7   802-3-ethernet    系统     2015年08月20日 星期四 16时07分49秒
+System eth0               c265704c-fd2a-4758-8887-c0dac836f8af   802-3-ethernet    系统     2015年08月20日 星期四 16时52分49秒
+名称                      UUID                                   类型              范围     真实时间戳                        
+
+
+
+
+
+
+--------------------------------------------------------------------------  vi
+查找时候，不区分大小写   /search-text\c
+查找时候，区分大小写   /search-text\C
+
+全文替换  :%s#/u02/mysqllog/log/relaylog#/newlogdir/log/relaylog#g
+
+
+--------------------------------------------------------------------------  挂载 光盘
+[root@node2 /]# mount /dev/sr0 /media/disk/
+
+
+
+
+
+
+
